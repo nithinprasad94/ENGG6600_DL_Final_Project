@@ -1,0 +1,60 @@
+[1] First, we fix PCA with all of the components (all 784 components)
+
+[2] Then, we fix Hyperparameters as follows:
+(1) Num. Epochs = 50
+(2) Learning Rate = 0.001
+(3) Batch Size = 128
+(4) Dropout Rate = 0.5
+
+[3] Then, we try to determine network size by varying the number of hidden layers
+ 	{
+        [32],
+        [64],
+        [128],
+        [256],
+        [32,32],
+        [32,64],
+        [32,128],
+        [32,256],
+        [64,32],
+        [64,64],
+        [64,128],
+        [64,256],
+        [128,32],
+        [128,64],
+        [128,128],
+        [128,256],
+        [256,32],
+        [256,64],
+        [256,128],
+        [256,256],
+        [128,64,128],
+        [128,64,64,128]
+}
+
+=> Looks like Best parameters: {'input_size': 784, 'hidden_sizes': [256, 128], 'lr': 0.001, 'epochs': 50, 'batch_size': 128, 'dropout_rate': 0.5}
+=> Best validation accuracy: 0.36507936507936506 (low confidence ... just a starting point)
+
+[4] Then, we can optimize hyperparameters for a given network
+Best parameters: {'input_size': 784, 'hidden_sizes': [256, 128], 'lr': 0.0001, 'epochs': 100, 'batch_size': 64, 'dropout_rate': 0.5}
+Best validation accuracy: 0.3783068783068783
+Test Accuracy: 38.52%
+
+Then we tune Number of principal components to get optimum number of components:
+=> num_components = [1,2,5,10,20,50,100,200,300,400,500,600,700,784]
+=> Best val accuracy:  0.3862433862433862
+   Best number of components:  500
+
+---
+Other factors to consider (for just MLP):
+- discuss how changing the process (hyperparams, model arch, pca) ie. order with which each is tweaked would affect the final model.
+- early stopping
+- regularization
+- over/underfit?
+- results need to be averaged over a number of runs (in each case)
+- F1 scores for unbalanced classes. PR Curve? other metrics
+- stratifying class data across train, val and test set
+- other manual feature computation on images such as SIFT, HOG, LBP, etc (rather than doing PCA)
+- how would all of this change if we use the images directly? (as opposed to using the 28x28 approximated images)
+
+
