@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader, random_split
 from PIL import Image
 
-torch.cuda.is_available()
+from torchsummary import summary
 
 ###
 
@@ -72,10 +72,12 @@ train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 validation_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-##
+###
 
 #Used ChatGPT to generate this code to make sure that the images are properly extracted
 '''
+#Used ChatGPT to generate this code to make sure that the images are properly extracted
+
 print("Trying visualization")
 
 class_names = metadata['dx'].unique().tolist()
@@ -100,6 +102,8 @@ for i in range(len(inputs)):
     imshow(inputs[i], classes[i], filenames[i])
     '''
 
+###
+
 class DCNN(nn.Module):
 
     def __init__(self):
@@ -112,11 +116,13 @@ class DCNN(nn.Module):
         ##Assume input image of size 64x64
         
         self.conv1 = nn.Conv2d(in_channels=3,out_channels=32,kernel_size=3,stride=1)
-        self.maxpool2d_1 = nn.MaxPool2d(kernel_size=2,stride=1)
-        self.conv2 = nn.Conv2d(in_channels=3,out_channels=32,kernel_size=3,stride=1)
-        self.maxpool2d_2 = nn.MaxPool2d(kernel_size=2,stride=1)
-        self.conv3 = nn.Conv2d(in_channels=3,out_channels=32,kernel_size=3,stride=1)
-        self.maxpool2d_3 = nn.MaxPool2d(kernel_size=2,stride=1)
+        self.maxpool2d_1 = nn.MaxPool2d(kernel_size=2,stride=2)
+        self.conv2 = nn.Conv2d(in_channels=32,out_channels=64,kernel_size=3,stride=1)
+        self.maxpool2d_2 = nn.MaxPool2d(kernel_size=2,stride=2)
+        self.conv3 = nn.Conv2d(in_channels=64,out_channels=128,kernel_size=3,stride=1)
+        self.maxpool2d_3 = nn.MaxPool2d(kernel_size=2,stride=2)
+
+        self.flatten = nn.Flatten()
         
         self.fc1 = nn.Linear(4608,512)
         self.fc2 = nn.Linear(512,7)
@@ -136,30 +142,41 @@ class DCNN(nn.Module):
         x = F.relu(x)
         x = self.maxpool2d_3(x)
         
-        x = torch.nn.Flatten(x)
+        #x = torch.flatten(x,1)
+        x = self.flatten(x)
         
         x = self.fc1(x)
         x = F.relu(x)
-        x = self.dropout2(x)
+        x = self.fc2(x)
+        x = F.relu(x)
+        
         x = F.log_softmax(x, dim=1)
 
         return x
 
+###
+
 # Step 1: Instantiate the model
 model = DCNN()
-device = torch.device("cuda")
+
+summary(model,(3,64,64))
+#assert False
+
+#device = torch.device("cpu") #not "cuda"
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 model.to(device)  # Move your model to GPU if cuda is available
 
 # Step 2: Define a loss function
 criterion = nn.CrossEntropyLoss()
 
 # Step 3: Choose an optimizer
-optimizer = torch.optim.RMSProp(model.parameters(), lr=0.01)  # You can also try different learning rates
+optimizer = torch.optim.RMSprop(model.parameters(), lr=0.01)  # You can also try different learning rates
 
 # Step 4: Training loop
 num_epochs = 100  # Set the number of epochs
 
 for epoch in range(num_epochs):
+    print("Epoch: ",epoch)
     model.train()  # Set the model to training mode
     running_loss = 0.0
     for images, labels, _ in train_loader:
