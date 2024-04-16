@@ -46,31 +46,7 @@ class DatasetLoader(Dataset):
 
         return image, label, filename
 
-###
 
-transform = tv.transforms.Compose([
-    tv.transforms.Resize((64,64)),
-    tv.transforms.ToTensor(),
-    tv.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
-
-img_path = './data/images/'
-metadata_path = './data/HAM10000_metadata.csv'
-metadata = pd.read_csv(metadata_path)
-dataset = DatasetLoader(metadata=metadata, img_dir=img_path, transform=transform)
-
-###
-
-# Split the dataset 60-20-20
-train_size = int(0.6 * len(dataset))
-validation_size = int(0.2 * len(dataset))
-test_size = len(dataset) - train_size - validation_size
-train_dataset, validation_dataset, test_dataset = random_split(dataset, [train_size, validation_size, test_size])
-
-batch_size = 32
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-validation_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 ###
 
@@ -156,66 +132,95 @@ class DCNN(nn.Module):
 
 ###
 
-# Step 1: Instantiate the model
-model = DCNN()
+if __name__ == "__main__":
 
-summary(model,(3,64,64))
-#assert False
+    ###
 
-#device = torch.device("cpu") #not "cuda"
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-model.to(device)  # Move your model to GPU if cuda is available
+    transform = tv.transforms.Compose([
+        tv.transforms.Resize((64,64)),
+        tv.transforms.ToTensor(),
+        tv.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
 
-# Step 2: Define a loss function
-criterion = nn.CrossEntropyLoss()
+    img_path = './data/images/'
+    metadata_path = './data/HAM10000_metadata.csv'
+    metadata = pd.read_csv(metadata_path)
+    dataset = DatasetLoader(metadata=metadata, img_dir=img_path, transform=transform)
 
-# Step 3: Choose an optimizer
-optimizer = torch.optim.RMSprop(model.parameters(), lr=0.01)  # You can also try different learning rates
+    ###
 
-# Step 4: Training loop
-num_epochs = 100  # Set the number of epochs
+    # Split the dataset 60-20-20
+    train_size = int(0.6 * len(dataset))
+    validation_size = int(0.2 * len(dataset))
+    test_size = len(dataset) - train_size - validation_size
+    train_dataset, validation_dataset, test_dataset = random_split(dataset, [train_size, validation_size, test_size])
 
-for epoch in range(num_epochs):
-    print("Epoch: ",epoch)
-    model.train()  # Set the model to training mode
-    running_loss = 0.0
-    for images, labels, _ in train_loader:
-        images, labels = images.to(device), labels.to(device)
-        
-        # Zero the parameter gradients
-        optimizer.zero_grad()
+    batch_size = 32
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    validation_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-        # Forward pass
-        outputs = model(images)
-        loss = criterion(outputs, labels)
 
-        # Backward pass and optimize
-        loss.backward()
-        optimizer.step()
+    # Step 1: Instantiate the model
+    model = DCNN()
 
-        running_loss += loss.item() * images.size(0)
-    
-    epoch_loss = running_loss / len(train_loader.dataset)
-    print(f'Epoch {epoch+1}/{num_epochs} - Loss: {epoch_loss:.4f}')
+    summary(model,(3,64,64))
+    #assert False
 
-    # Validation loop (optional, but recommended)
-    model.eval()  # Set the model to evaluation mode
-    validation_loss = 0.0
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for images, labels, _ in validation_loader:
+    #device = torch.device("cpu") #not "cuda"
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    model.to(device)  # Move your model to GPU if cuda is available
+
+    # Step 2: Define a loss function
+    criterion = nn.CrossEntropyLoss()
+
+    # Step 3: Choose an optimizer
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=0.01)  # You can also try different learning rates
+
+    # Step 4: Training loop
+    num_epochs = 100  # Set the number of epochs
+
+    for epoch in range(num_epochs):
+        print("Epoch: ",epoch)
+        model.train()  # Set the model to training mode
+        running_loss = 0.0
+        for images, labels, _ in train_loader:
             images, labels = images.to(device), labels.to(device)
+            
+            # Zero the parameter gradients
+            optimizer.zero_grad()
+
+            # Forward pass
             outputs = model(images)
             loss = criterion(outputs, labels)
-            validation_loss += loss.item() * images.size(0)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
 
-    epoch_val_loss = validation_loss / len(validation_loader.dataset)
-    val_accuracy = correct / total
-    print(f'Validation Loss: {epoch_val_loss:.4f}, Accuracy: {val_accuracy:.4f}')
+            # Backward pass and optimize
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item() * images.size(0)
+        
+        epoch_loss = running_loss / len(train_loader.dataset)
+        print(f'Epoch {epoch+1}/{num_epochs} - Loss: {epoch_loss:.4f}')
+
+        # Validation loop (optional, but recommended)
+        model.eval()  # Set the model to evaluation mode
+        validation_loss = 0.0
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for images, labels, _ in validation_loader:
+                images, labels = images.to(device), labels.to(device)
+                outputs = model(images)
+                loss = criterion(outputs, labels)
+                validation_loss += loss.item() * images.size(0)
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+
+        epoch_val_loss = validation_loss / len(validation_loader.dataset)
+        val_accuracy = correct / total
+        print(f'Validation Loss: {epoch_val_loss:.4f}, Accuracy: {val_accuracy:.4f}')
 
 
 
